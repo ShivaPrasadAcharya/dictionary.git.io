@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Data Manager with Boolean Filtering</title>
+    <style>
+        /* Previous styles remain same until code-block */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+       
+
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button.edit-btn {
+            background-color: #28a745;
+        }
+
+        button.edit-btn:hover {
+            background-color: #218838;
+        }
+
+        #dataForm {
+            scroll-margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Add/Edit Form Section (A) -->
+        <div class="card">
+            <h2>Add New Item</h2>
+            <form id="dataForm">
+                <div class="form-group">
+                    <label for="id">ID:</label>
+                    <input type="text" id="id" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <textarea id="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="keywords">Keywords (comma separated, for filtering):</label>
+                    <input type="text" id="keywords" required>
+                </div>
+                <button type="submit" id="submitBtn">Add Item</button>
+                <button type="button" id="cancelBtn" class="hidden">Cancel</button>
+            </form>
+        </div>
+
+        <!-- Content Display Section (C) -->
+        <div class="card">
+            <h2>Content Display</h2>
+            <div id="itemsList"></div>
+        </div>
+
+        <!-- Filter Section (F) -->
+        <div class="card">
+            <h2>Filter Items</h2>
+            <div class="form-group">
+                <input type="text" id="filter" placeholder="Enter filter expression (e.g., urgent+high, bug/feature)">
+                <div class="filter-help">
+                 <!--   <strong>Filter Syntax:</strong>
+                    <ul>
+                        <li><code>A+B+C</code> - Must contain ALL keywords (A AND B AND C)</li>
+                        <li><code>A/B/C</code> - Must contain ANY keyword (A OR B OR C)</li>
+                        <li><code>A-(B/C)</code> - Must contain A but NOT (B OR C)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>-->
+
+        <!-- Generated Code Section (G) -->
+        <div class="card">
+            <h2>Generated Code</h2>
+            <div class="code-container">
+                <pre class="code-block" id="codeBlock"></pre>
+                <button class="copy-btn" onclick="copyCode()">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="copy-alert" id="copyAlert">Code copied to clipboard!</div>
+
+    <script>
+        let items = [
+  {
+    "id": "100",
+    "description": "441ygg",
+    "keywords": [
+      "god",
+      "vishnu",
+      "shiva"
+    ]
+  },
+  {
+    id: "103",
+    description: "asdf",
+    keywords: ["no", "yes", "both"]
+},
+  {
+    "id": "101",
+    "description": "durga",
+    "keywords": [
+      "durgi",
+      "dog",
+      "ok"
+    ]
+  }
+];
+        let editingIndex = null;
+
+        // Update code block based on current form inputs
+        function updateCodeBlock() {
+            const id = document.getElementById('id').value;
+            const description = document.getElementById('description').value;
+            const keywords = document.getElementById('keywords').value;
+
+            const code = keywords ? 
+                `{id:"${id}",description:"${description}",keywords:[${keywords.split(',').map(k => `"${k.trim()}"`).join(',')}]}` :
+                `{id:"${id}",description:"${description}",keywords:[]}`;
+
+            document.getElementById('codeBlock').textContent = code;
+        }
+
+        // Add input event listeners for real-time code generation
+        ['id', 'description', 'keywords'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateCodeBlock);
+        });
+
+        // Form submission handler
+        document.getElementById('dataForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const newItem = {
+                id: document.getElementById('id').value,
+                description: document.getElementById('description').value,
+                keywords: document.getElementById('keywords').value.split(',').map(k => k.trim())
+            };
+
+            if (editingIndex !== null) {
+                items[editingIndex] = newItem;
+                editingIndex = null;
+                document.getElementById('submitBtn').textContent = 'Add Item';
+                document.getElementById('cancelBtn').classList.add('hidden');
+            } else {
+                items.push(newItem);
+            }
+
+            this.reset();
+            updateDisplay();
+            updateCodeBlock();
+        });
+
+        // Parse filter expression with boolean logic
+        function parseFilterExpression(expression) {
+            const trimmed = expression.trim();
+            if (!trimmed) return null;
+
+            return function(item) {
+                if (trimmed.includes('-')) {
+                    const [includePart, excludePart] = trimmed.split('-');
+                    const includeTerms = includePart.split('+').map(t => t.trim()).filter(t => t);
+                    const excludeTerms = excludePart.replace('(', '').replace(')', '')
+                        .split('/').map(t => t.trim()).filter(t => t);
+
+                    return includeTerms.every(term => 
+                        item.keywords.some(keyword => 
+                            keyword.toLowerCase().includes(term.toLowerCase())
+                        )
+                    ) && !excludeTerms.some(term =>
+                        item.keywords.some(keyword =>
+                            keyword.toLowerCase().includes(term.toLowerCase())
+                        )
+                    );
+                }
+                else if (trimmed.includes('/')) {
+                    const terms = trimmed.split('/').map(t => t.trim()).filter(t => t);
+                    return terms.some(term =>
+                        item.keywords.some(keyword =>
+                            keyword.toLowerCase().includes(term.toLowerCase())
+                        )
+                    );
+                }
+                else if (trimmed.includes('+')) {
+                    const terms = trimmed.split('+').map(t => t.trim()).filter(t => t);
+                    return terms.every(term =>
+                        item.keywords.some(keyword =>
+                            keyword.toLowerCase().includes(term.toLowerCase())
+                        )
+                    );
+                }
+                else {
+                    return item.keywords.some(keyword =>
+                        keyword.toLowerCase().includes(trimmed.toLowerCase())
+                    );
+                }
+            };
+        }
+
+        // Filter handler
+        document.getElementById('filter').addEventListener('input', function(e) {
+            updateDisplay();
+        });
+
+        // Edit item function with smooth scroll
+        function editItem(index) {
+            const item = items[index];
+            const form = document.getElementById('dataForm');
+            
+            document.getElementById('id').value = item.id;
+            document.getElementById('description').value = item.description;
+            document.getElementById('keywords').value = item.keywords.join(', ');
+            document.getElementById('submitBtn').textContent = 'Update Item';
+            document.getElementById('cancelBtn').classList.remove('hidden');
+            editingIndex = index;
+
+            // Smooth scroll to form
+            form.scrollIntoView({ behavior: 'smooth' });
+            
+            // Update code block with current values
+            updateCodeBlock();
+        }
+
+        // Cancel edit button handler
+        document.getElementById('cancelBtn').addEventListener('click', function() {
+            editingIndex = null;
+            document.getElementById('dataForm').reset();
+            document.getElementById('submitBtn').textContent = 'Add Item';
+            this.classList.add('hidden');
+            updateCodeBlock();
+        });
+
+        // Update display based on filter
+        function updateDisplay() {
+            const filterValue = document.getElementById('filter').value;
+            const filterFunction = parseFilterExpression(filterValue);
+            
+            const filteredItems = filterFunction ? items.filter(filterFunction) : items;
+
+            const itemsList = document.getElementById('itemsList');
+            itemsList.innerHTML = filteredItems.map((item, index) => `
+                <div class="item">
+                    <div class="item-content">
+                        <div><strong>ID:</strong> ${item.id}</div>
+                        <div><strong>Description:</strong> ${item.description}</div>
+                    </div>
+                    <button class="edit-btn" onclick="editItem(${index})">Edit</button>
+                </div>
+            `).join('');
+        }
+
+        // Copy code function
+        function copyCode() {
+            const codeText = document.getElementById('codeBlock').textContent;
+            navigator.clipboard.writeText(codeText);
+            
+            const alert = document.getElementById('copyAlert');
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 2000);
+        }
+
+        // Initial setup
+        updateDisplay();
+        updateCodeBlock();
+    </script>
+</body>
+</html>
